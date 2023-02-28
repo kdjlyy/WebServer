@@ -118,10 +118,12 @@ Linux下C++轻量级Web服务器，助力初学者快速实践网络编程，搭
 * 修改main.cpp中的数据库初始化信息
 
     ```C++
-    //数据库登录名,密码,库名
+    // 需要修改的数据库信息,登录名,密码,库名
+    string mysql_host = "172.17.0.2";
+    int mysql_port = 3306;
     string user = "root";
-    string passwd = "root";
-    string databasename = "yourdb";
+    string passwd = "123456";
+    string databasename = "web_server";
     ```
 
 * build
