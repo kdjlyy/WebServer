@@ -1,4 +1,7 @@
 ![Bower](https://img.shields.io/bower/l/bootstrap)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/kdjlyy/WebServer)
+![GitHub last commit (by committer)](https://img.shields.io/github/last-commit/kdjlyy/WebServer)
+
 
 WebServer
 ===============
