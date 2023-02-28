@@ -1,6 +1,6 @@
 
 
-TinyWebServer
+WebServer
 ===============
 Linux下C++轻量级Web服务器，助力初学者快速实践网络编程，搭建属于自己的服务器.
 
@@ -87,8 +87,8 @@ Linux下C++轻量级Web服务器，助力初学者快速实践网络编程，搭
 快速运行
 ------------
 * 服务器测试环境
-	* Ubuntu版本16.04
-	* MySQL版本5.7.29
+	* Ubuntu版本20.04
+	* MySQL版本5.7
 * 浏览器测试环境
 	* Windows、Linux均可
 	* Chrome
