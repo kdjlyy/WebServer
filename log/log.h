@@ -10,28 +10,32 @@
 
 using namespace std;
 
+// 单例模式
 class Log {
 public:
-    // C++11以后,使用局部变量懒汉不用加锁
+    // C++11以后,使用局部静态变量懒汉不用加锁
     static Log* get_instance() {
         static Log instance;
         return &instance;
     }
 
+    // 异步写日志公有方法，调用私有方法async_write_log
     static void* flush_log_thread(void* args) {
         Log::get_instance()->async_write_log();
         return nullptr;
     }
+
     // 可选择的参数有日志文件、日志缓冲区大小、最大行数以及最长日志条队列
     bool init(const char* file_name, int close_log, int log_buf_size = 8192, int split_lines = 5000000, int max_queue_size = 0);
 
-    void write_log(int level, const char* format, ...);
+    void write_log(int level, const char* format, ...); // 将输出内容按照标准格式整理
 
-    void flush(void);
+    void flush(void); // 强制刷新缓冲区
 
 private:
     Log();
     virtual ~Log();
+
     void* async_write_log() {
         string single_log;
         // 从阻塞队列中取出一个日志string，写入文件
@@ -40,7 +44,6 @@ private:
             fputs(single_log.c_str(), m_fp);
             m_mutex.unlock();
         }
-
         return nullptr;
     }
 
@@ -59,6 +62,7 @@ private:
     int m_close_log; // 关闭日志
 };
 
+// 日志类中的方法都不会被其他程序直接调用，这四个可变参数宏提供了其他程序的调用方法。
 #define LOG_DEBUG(format, ...)                                    \
     if (0 == m_close_log) {                                       \
         Log::get_instance()->write_log(0, format, ##__VA_ARGS__); \

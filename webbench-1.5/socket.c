@@ -9,10 +9,10 @@
   SCCS ID:      @(#)socket.c    1.5  4/1/94
   programmer:   Virginia Tech Computing Center
   compiler:     DEC RISC C compiler (Ultrix 4.1)
-  environment:  DEC Ultrix 4.3
+  environment:  DEC Ultrix 4.3 
   description:  UNIX sockets code.
  ***********************************************************************/
-
+ 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <fcntl.h>
@@ -32,7 +32,7 @@ int Socket(const char *host, int clientPort)
     unsigned long inaddr;
     struct sockaddr_in ad;
     struct hostent *hp;
-
+    
     memset(&ad, 0, sizeof(ad));
     ad.sin_family = AF_INET;
 
@@ -44,11 +44,10 @@ int Socket(const char *host, int clientPort)
         hp = gethostbyname(host);
         if (hp == NULL)
             return -1;
-        // memcpy(&ad.sin_addr, hp->h_addr, hp->h_length);
-        memcpy(&ad.sin_addr, hp->h_addr_list[0], hp->h_length);
+        memcpy(&ad.sin_addr, hp->h_addr, hp->h_length);
     }
     ad.sin_port = htons(clientPort);
-
+    
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0)
         return sock;
@@ -56,3 +55,4 @@ int Socket(const char *host, int clientPort)
         return -1;
     return sock;
 }
+

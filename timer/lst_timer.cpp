@@ -138,22 +138,23 @@ void cb_func(client_data* user_data) {
     http_conn::m_user_count--; // 减少连接数
 }
 
-//============================================
-//============== Utils类成员函数实现 ===========
-//============================================
+//==============================================
+//============== Utils类成员函数实现 =============
+//==============================================
 int* Utils::u_pipefd = 0;
 int Utils::u_epollfd = 0;
 
 void Utils::init(int timeslot) {
     m_TIMESLOT = timeslot;
 }
-// 对文件描述符设置非阻塞
+
 int Utils::setnonblocking(int fd) {
     int old_option = fcntl(fd, F_GETFL);
     int new_option = old_option | O_NONBLOCK;
     fcntl(fd, F_SETFL, new_option);
     return old_option;
 }
+
 // 将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
 void Utils::addfd(int epollfd, int fd, bool one_shot, int TRIGMode) {
     epoll_event _event;

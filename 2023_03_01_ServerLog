@@ -1,0 +1,78 @@
+2023-03-01 16:31:55.084058 [info]: adjust timer once
+2023-03-01 16:31:55.084174 [info]: [process_read->get_line()]: GET / HTTP/1.1
+2023-03-01 16:31:55.084271 [info]: [process_read->get_line()]: Host: 127.0.0.1:9006
+2023-03-01 16:31:55.084278 [info]: [process_read->get_line()]: Connection: keep-alive
+2023-03-01 16:31:55.084282 [info]: [process_read->get_line()]: sec-ch-ua: "Chromium";v="110", "Not A(Brand";v="24", "Google Chrome";v="110"
+2023-03-01 16:31:55.084285 [info]: oop!unknow header: sec-ch-ua: "Chromium";v="110", "Not A(Brand";v="24", "Google Chrome";v="110"
+2023-03-01 16:31:55.084289 [info]: [process_read->get_line()]: sec-ch-ua-mobile: ?0
+2023-03-01 16:31:55.084292 [info]: oop!unknow header: sec-ch-ua-mobile: ?0
+2023-03-01 16:31:55.084296 [info]: [process_read->get_line()]: sec-ch-ua-platform: "macOS"
+2023-03-01 16:31:55.084299 [info]: oop!unknow header: sec-ch-ua-platform: "macOS"
+2023-03-01 16:31:55.084302 [info]: [process_read->get_line()]: Upgrade-Insecure-Requests: 1
+2023-03-01 16:31:55.084342 [info]: oop!unknow header: Upgrade-Insecure-Requests: 1
+2023-03-01 16:31:55.084358 [info]: [process_read->get_line()]: User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
+2023-03-01 16:31:55.084362 [info]: oop!unknow header: User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
+2023-03-01 16:31:55.084366 [info]: [process_read->get_line()]: Sec-Purpose: prefetch;prerender
+2023-03-01 16:31:55.084390 [info]: oop!unknow header: Sec-Purpose: prefetch;prerender
+2023-03-01 16:31:55.084396 [info]: [process_read->get_line()]: Purpose: prefetch
+2023-03-01 16:31:55.084399 [info]: oop!unknow header: Purpose: prefetch
+2023-03-01 16:31:55.084403 [info]: [process_read->get_line()]: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+2023-03-01 16:31:55.084407 [info]: oop!unknow header: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+2023-03-01 16:31:55.084411 [info]: [process_read->get_line()]: Sec-Fetch-Site: none
+2023-03-01 16:31:55.084414 [info]: oop!unknow header: Sec-Fetch-Site: none
+2023-03-01 16:31:55.084417 [info]: [process_read->get_line()]: Sec-Fetch-Mode: navigate
+2023-03-01 16:31:55.084421 [info]: oop!unknow header: Sec-Fetch-Mode: navigate
+2023-03-01 16:31:55.084424 [info]: [process_read->get_line()]: Sec-Fetch-User: ?1
+2023-03-01 16:31:55.084427 [info]: oop!unknow header: Sec-Fetch-User: ?1
+2023-03-01 16:31:55.084430 [info]: [process_read->get_line()]: Sec-Fetch-Dest: document
+2023-03-01 16:31:55.084434 [info]: oop!unknow header: Sec-Fetch-Dest: document
+2023-03-01 16:31:55.084437 [info]: [process_read->get_line()]: Accept-Encoding: gzip, deflate, br
+2023-03-01 16:31:55.084466 [info]: oop!unknow header: Accept-Encoding: gzip, deflate, br
+2023-03-01 16:31:55.084486 [info]: [process_read->get_line()]: Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6
+2023-03-01 16:31:55.084491 [info]: oop!unknow header: Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6
+2023-03-01 16:31:55.084494 [info]: [process_read->get_line()]: 
+2023-03-01 16:33:27.791466 [info]: adjust timer once
+2023-03-01 16:33:27.792941 [info]: [process_read->get_line()]: GET / HTTP/1.1
+2023-03-01 16:33:27.793033 [info]: [process_read->get_line()]: Host: 127.0.0.1:9006
+2023-03-01 16:33:27.793182 [info]: [process_read->get_line()]: Connection: keep-alive
+2023-03-01 16:33:27.793193 [info]: [process_read->get_line()]: Cache-Control: max-age=0
+2023-03-01 16:33:27.793204 [info]: oop!unknow header: Cache-Control: max-age=0
+2023-03-01 16:33:27.793211 [info]: [process_read->get_line()]: sec-ch-ua: "Chromium";v="110", "Not A(Brand";v="24", "Google Chrome";v="110"
+2023-03-01 16:33:27.793217 [info]: oop!unknow header: sec-ch-ua: "Chromium";v="110", "Not A(Brand";v="24", "Google Chrome";v="110"
+2023-03-01 16:33:27.793223 [info]: [process_read->get_line()]: sec-ch-ua-mobile: ?0
+2023-03-01 16:33:27.793241 [info]: oop!unknow header: sec-ch-ua-mobile: ?0
+2023-03-01 16:33:27.793248 [info]: [process_read->get_line()]: sec-ch-ua-platform: "macOS"
+2023-03-01 16:33:27.793254 [info]: oop!unknow header: sec-ch-ua-platform: "macOS"
+2023-03-01 16:33:27.793260 [info]: [process_read->get_line()]: Upgrade-Insecure-Requests: 1
+2023-03-01 16:33:27.793265 [info]: oop!unknow header: Upgrade-Insecure-Requests: 1
+2023-03-01 16:33:27.793271 [info]: [process_read->get_line()]: User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
+2023-03-01 16:33:27.793278 [info]: oop!unknow header: User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
+2023-03-01 16:33:27.793285 [info]: [process_read->get_line()]: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+2023-03-01 16:33:27.793291 [info]: oop!unknow header: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+2023-03-01 16:33:27.793297 [info]: [process_read->get_line()]: Sec-Fetch-Site: cross-site
+2023-03-01 16:33:27.793302 [info]: oop!unknow header: Sec-Fetch-Site: cross-site
+2023-03-01 16:33:27.793309 [info]: [process_read->get_line()]: Sec-Fetch-Mode: navigate
+2023-03-01 16:33:27.793315 [info]: oop!unknow header: Sec-Fetch-Mode: navigate
+2023-03-01 16:33:27.793320 [info]: [process_read->get_line()]: Sec-Fetch-User: ?1
+2023-03-01 16:33:27.793326 [info]: oop!unknow header: Sec-Fetch-User: ?1
+2023-03-01 16:33:27.793333 [info]: [process_read->get_line()]: Sec-Fetch-Dest: document
+2023-03-01 16:33:27.793338 [info]: oop!unknow header: Sec-Fetch-Dest: document
+2023-03-01 16:33:27.793344 [info]: [process_read->get_line()]: Accept-Encoding: gzip, deflate, br
+2023-03-01 16:33:27.793349 [info]: oop!unknow header: Accept-Encoding: gzip, deflate, br
+2023-03-01 16:33:27.793356 [info]: [process_read->get_line()]: Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6
+2023-03-01 16:33:27.793362 [info]: oop!unknow header: Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6
+2023-03-01 16:33:27.793367 [info]: [process_read->get_line()]: 
+2023-03-01 16:33:27.793445 [info]: [Response write_buf]: HTTP/1.1 200 OK
+
+2023-03-01 16:33:27.793482 [info]: [Response write_buf]: HTTP/1.1 200 OK
+Content-Length:561
+
+2023-03-01 16:33:27.793493 [info]: [Response write_buf]: HTTP/1.1 200 OK
+Content-Length:561
+Connection:keep-alive
+
+2023-03-01 16:33:27.793500 [info]: [Response write_buf]: HTTP/1.1 200 OK
+Content-Length:561
+Connection:keep-alive
+
+

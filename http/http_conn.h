@@ -1,4 +1,4 @@
-#define PRINT_REQUEST_DATA // 输出用户请求元数据
+// #define PRINT_REQUEST_DATA // 输出用户请求元数据
 
 #ifndef HTTPCONNECTION_H
 #define HTTPCONNECTION_H
@@ -89,8 +89,14 @@ public:
         return &m_address;
     }
     void initmysql_result(connection_pool* connPool); // 同步线程初始化数据库读取表
-    int timer_flag;                                   // ？
-    int improv;                                       //?
+
+    /*
+     * 两个标志位的作用就是：“Reactor模式下，当子线程执行读写任务出错时，来通知主线程关闭子线程的客户连接”。
+     * 对于improv标志，其作用是保持主线程和子线程的同步；
+     * 对于time_flag标志，其作用是标识子线程读写任务是否成功。
+    */
+    int timer_flag;
+    int improv;
 
 private:
     void init();

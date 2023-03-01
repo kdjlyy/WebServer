@@ -13,14 +13,26 @@
 #include "../lock/locker.h"
 using namespace std;
 
+// 阻塞队列 使用了循环数组实现了队列，作为push和pop共享缓冲区
 template <class T>
 class block_queue {
+private:
+    // RAII机制实现的互斥锁和条件变量
+    locker m_mutex;
+    cond m_cond;
+
+    T* m_array;     // 队列
+    int m_size;     // 当前队列大小
+    int m_max_size; // 队列上限
+    int m_front;
+    int m_back;
+
 public:
     block_queue(int max_size = 1000) {
         if (max_size <= 0) {
             exit(-1);
         }
-
+        // 构造函数创建循环数组
         m_max_size = max_size;
         m_array = new T[max_size];
         m_size = 0;
@@ -43,6 +55,7 @@ public:
 
         m_mutex.unlock();
     }
+
     //判断队列是否满了
     bool full() {
         m_mutex.lock();
@@ -108,14 +121,12 @@ public:
         m_mutex.unlock();
         return tmp;
     }
-    //往队列添加元素，需要将所有使用队列的线程先唤醒
-    //当有元素push进队列,相当于生产者生产了一个元素
-    //若当前没有线程等待条件变量,则唤醒无意义
+
+    // 往队列添加元素,需要将所有使用队列的线程先唤醒,当有元素push进队列,相当于生产者生产了一个元素,若当前没有线程等待条件变量,则唤醒无意义
     bool push(const T& item) {
 
         m_mutex.lock();
-        if (m_size >= m_max_size) {
-
+        if (m_size >= m_max_size) { // 队列满了，唤醒线程
             m_cond.broadcast();
             m_mutex.unlock();
             return false;
@@ -123,25 +134,26 @@ public:
 
         m_back = (m_back + 1) % m_max_size;
         m_array[m_back] = item;
-
         m_size++;
 
         m_cond.broadcast();
         m_mutex.unlock();
         return true;
     }
+
     //pop时,如果当前队列没有元素,将会等待条件变量
     bool pop(T& item) {
-
         m_mutex.lock();
+        // 多个消费者的时候，这里要是用while而不是if
         while (m_size <= 0) {
-
+            // 抢锁失败，返回false
             if (!m_cond.wait(m_mutex.get())) {
                 m_mutex.unlock();
                 return false;
             }
         }
 
+        // 取出队列首的元素
         m_front = (m_front + 1) % m_max_size;
         item = m_array[m_front];
         m_size--;
@@ -149,7 +161,7 @@ public:
         return true;
     }
 
-    //增加了超时处理
+    //增加了超时处理 在pthread_cond_wait基础上增加了等待的时间，只指定时间内能抢到互斥锁即可
     bool pop(T& item, int ms_timeout) {
         struct timespec t = { 0, 0 };
         struct timeval now = { 0, 0 };
@@ -175,16 +187,6 @@ public:
         m_mutex.unlock();
         return true;
     }
-
-private:
-    locker m_mutex;
-    cond m_cond;
-
-    T* m_array;
-    int m_size;
-    int m_max_size;
-    int m_front;
-    int m_back;
 };
 
 #endif

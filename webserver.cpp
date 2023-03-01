@@ -73,9 +73,9 @@ void WebServer::log_write() {
     if (0 == m_close_log) {
         // 初始化日志 m_log_write 0:同步写入 1:异步写入
         if (1 == m_log_write)
-            Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 800); // 异步需要设置阻塞队列长度
+            Log::get_instance()->init("./ServerLog", m_close_log, 4096, 800000, 800); // 异步需要设置阻塞队列长度
         else
-            Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 0);
+            Log::get_instance()->init("./ServerLog", m_close_log, 4096, 800000, 0);
     }
 }
 
@@ -199,6 +199,8 @@ bool WebServer::dealwithsignal(bool& timeout, bool& stop_server) {
 }
 
 void WebServer::dealwithread(int sockfd) {
+    std::cout << "WebServer::dealwithread" << std::endl;
+
     util_timer* timer = users_timer[sockfd].timer;
 
     // reactor
@@ -206,10 +208,11 @@ void WebServer::dealwithread(int sockfd) {
         if (timer) {
             adjust_timer(timer);
         }
-
+        std::cout << "WebServer::dealwithread reactor" << std::endl;
         // 若监测到读事件，将该事件放入请求队列
         WebServer::m_pool->append(WebServer::users + sockfd, 0);
 
+        // TODO
         while (true) {
             if (1 == users[sockfd].improv) {
                 if (1 == users[sockfd].timer_flag) {
@@ -239,6 +242,7 @@ void WebServer::dealwithread(int sockfd) {
 }
 
 void WebServer::dealwithwrite(int sockfd) {
+    std::cout << "WebServer::dealwithwrite" << std::endl;
     util_timer* timer = users_timer[sockfd].timer;
     // reactor
     if (1 == m_actormodel) {
@@ -246,8 +250,11 @@ void WebServer::dealwithwrite(int sockfd) {
             adjust_timer(timer);
         }
 
+        std::cout << "WebServer::dealwithwrite reactor" << std::endl;
+
         m_pool->append(users + sockfd, 1);
 
+        // TODO
         while (true) {
             if (1 == users[sockfd].improv) {
                 if (1 == users[sockfd].timer_flag) {
@@ -369,9 +376,7 @@ void WebServer::eventLoop() {
 
             // 客户连接事件:创建新连接，初始化定时器
             if (sockfd == WebServer::m_listenfd) {
-                bool flag = dealclientdata();
-                if (false == flag)
-                    continue;
+                dealclientdata();
             }
             // 异常事件:服务器端关闭连接，移除对应的定时器
             else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
@@ -389,6 +394,7 @@ void WebServer::eventLoop() {
             else if (events[i].events & EPOLLIN) {
                 dealwithread(sockfd);
             } else if (events[i].events & EPOLLOUT) { // 服务器子线程调用process_write完成响应报文，随后注册epollout事件
+                std::cout << "监测到EPOLLOUT" << std::endl;
                 dealwithwrite(sockfd);
             }
         }

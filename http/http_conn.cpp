@@ -1,7 +1,6 @@
-#include "http_conn.h"
-
 #include <fstream>
 #include <mysql/mysql.h>
+#include "http_conn.h"
 
 // 定义http响应的一些状态信息
 const char* ok_200_title = "OK";
@@ -15,7 +14,14 @@ const char* error_500_title = "Internal Error";
 const char* error_500_form = "There was an unusual problem serving the request file.\n";
 
 locker m_lock;
-map<string, string> users;
+map<string, string> users; // 用户名和密码
+
+int setnonblocking(int fd) {
+    int old_option = fcntl(fd, F_GETFL);
+    int new_option = old_option | O_NONBLOCK;
+    fcntl(fd, F_SETFL, new_option);
+    return old_option;
+}
 
 void http_conn::initmysql_result(connection_pool* connPool) {
     // 先从连接池中取一个连接
@@ -42,14 +48,6 @@ void http_conn::initmysql_result(connection_pool* connPool) {
         string temp2(row[1]);
         users[temp1] = temp2;
     }
-}
-
-// 对文件描述符设置非阻塞
-int setnonblocking(int fd) {
-    int old_option = fcntl(fd, F_GETFL);
-    int new_option = old_option | O_NONBLOCK;
-    fcntl(fd, F_SETFL, new_option);
-    return old_option;
 }
 
 // 将内核事件表注册读事件，ET模式下开启EPOLLONESHOT
@@ -95,6 +93,7 @@ int http_conn::m_epollfd = -1;
 void http_conn::close_conn(bool real_close) {
     if (real_close && (m_sockfd != -1)) {
         printf("close %d\n", m_sockfd);
+        LOG_INFO("close %d\n", m_sockfd);
         removefd(m_epollfd, m_sockfd);
         m_sockfd = -1;
         m_user_count--;
@@ -579,6 +578,9 @@ bool http_conn::add_content(const char* content) {
 
 // 服务器子线程调用process_write向m_write_buf中写入响应报文
 bool http_conn::process_write(HTTP_CODE ret) {
+
+    std::cout << "http_conn::process_write " << ret << std::endl;
+
     switch (ret) {
     case INTERNAL_ERROR: {
         add_status_line(500, error_500_title);
@@ -627,6 +629,7 @@ bool http_conn::process_write(HTTP_CODE ret) {
     default:
         return false;
     }
+
     // 除FILE_REQUEST状态外，其余状态只申请一个iovec，指向响应报文缓冲区
     m_iv[0].iov_base = m_write_buf;
     m_iv[0].iov_len = m_write_idx;
@@ -660,6 +663,8 @@ void http_conn::process() {
     if (!write_ret) {
         close_conn();
     }
+
+    std::cout << "http_conn::process after process_write " << m_TRIGMode << std::endl;
 
     // 服务器子线程调用process_write完成响应报文，随后注册epollout事件。
     // 服务器主线程检测写事件，并调用http_conn::write函数将响应报文发送给浏览器端。
