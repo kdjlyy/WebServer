@@ -71,9 +71,9 @@ void WebServer::log_write() {
     if (0 == m_close_log) {
         // 初始化日志 m_log_write 0:同步写入 1:异步写入
         if (1 == m_log_write)
-            Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 800); // 异步需要设置阻塞队列长度
+            Log::get_instance()->init("./ServerLog", m_close_log, 3000, 800000, 800); // 异步需要设置阻塞队列长度
         else
-            Log::get_instance()->init("./ServerLog", m_close_log, 2000, 800000, 0);
+            Log::get_instance()->init("./ServerLog", m_close_log, 3000, 800000, 0);
     }
 }
 
@@ -208,6 +208,7 @@ void WebServer::dealwithread(int sockfd) {
         WebServer::m_pool->append(WebServer::users + sockfd, 0);
 
         // TODO
+        // https://github.com/qinguoyi/TinyWebServer/issues/70
         while (true) {
             if (1 == users[sockfd].improv) {
                 if (1 == users[sockfd].timer_flag) {
@@ -338,23 +339,6 @@ void WebServer::eventLoop() {
     bool stop_server = false;
 
     while (!stop_server) {
-        /*
-        epoll_wait()
-        返回值：
-            正常返回：当有文件描述符就绪时，epoll_wait返回就绪文件描述符的数量。
-            超时返回：当超时时间到达，epoll_wait返回0。
-            出错返回：当出现错误时，epoll_wait返回-1，并将errno设置为相应的错误码。
-        指定超时值为-1会导致epoll_wait无限期阻塞
-
-        struct eventpoll {
-        　　...
-        　　//红黑树的根节点，这棵树中存储着所有添加到epoll中的事件，也就是这个epoll监控的事件
-        　　struct rb_root rbr;
-        　　// 双向链表rdllist保存着将要通过epoll_wait返回给用户的、满足条件的事件,只要获取 rdllist 的内容，就能知道哪些 Socket 收到数据
-        　　struct list_head rdllist;
-        　　...
-        };
-        */
         int number = epoll_wait(WebServer::m_epollfd, WebServer::events, MAX_EVENT_NUMBER, -1);
         // 当系统调用被信号中断时，会返回 EINTR 错误。这个错误通常是由于系统调用被信号中断，而不是由于程序本身的错误。可能是因为时钟信号。
         if (number < 0 && errno != EINTR) {

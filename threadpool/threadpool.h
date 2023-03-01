@@ -149,6 +149,7 @@ void threadpool<T>::run() {
                     request->timer_flag = 1;
                 }
             }
+
         } else // Proactor模型(主线程和内核负责处理读写数据、接收新连接等I/O操作，工作线程仅负责业务逻辑，如处理客户请求)
         {
             connectionRAII mysqlcon(&request->mysql, m_connPool);

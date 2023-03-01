@@ -481,6 +481,8 @@ bool http_conn::write() {
         return true;
     }
 
+    int mv0_len = m_iv[0].iov_len;
+
     while (1) {
         // 将响应报文的状态行、消息头、空行和响应正文发送给浏览器端
         temp = writev(m_sockfd, m_iv, m_iv_count);
@@ -498,15 +500,26 @@ bool http_conn::write() {
 
         bytes_have_send += temp;
         bytes_to_send -= temp;
+
         // 第一个iovec头部信息的数据已发送完，发送第二个iovec数据
-        if (bytes_have_send >= m_iv[0].iov_len) {
+        // if (bytes_have_send >= m_iv[0].iov_len) {
+        //     // 不再继续发送头部信息
+        //     m_iv[0].iov_len = 0;
+        //     m_iv[1].iov_base = m_file_address + (bytes_have_send - m_write_idx);
+        //     m_iv[1].iov_len = bytes_to_send;
+        // } else {
+        //     m_iv[0].iov_base = m_write_buf + bytes_have_send;
+        //     // m_iv[0].iov_len = m_iv[0].iov_len - bytes_have_send;
+        //     m_iv[0].iov_len = m_iv[0].iov_len - temp;
+        // }
+
+        if (bytes_have_send >= mv0_len) {
             // 不再继续发送头部信息
             m_iv[0].iov_len = 0;
             m_iv[1].iov_base = m_file_address + (bytes_have_send - m_write_idx);
             m_iv[1].iov_len = bytes_to_send;
         } else {
             m_iv[0].iov_base = m_write_buf + bytes_have_send;
-            // m_iv[0].iov_len = m_iv[0].iov_len - bytes_have_send;
             m_iv[0].iov_len = m_iv[0].iov_len - temp;
         }
 
