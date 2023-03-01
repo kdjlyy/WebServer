@@ -578,9 +578,6 @@ bool http_conn::add_content(const char* content) {
 
 // 服务器子线程调用process_write向m_write_buf中写入响应报文
 bool http_conn::process_write(HTTP_CODE ret) {
-
-    std::cout << "http_conn::process_write " << ret << std::endl;
-
     switch (ret) {
     case INTERNAL_ERROR: {
         add_status_line(500, error_500_title);
@@ -663,8 +660,6 @@ void http_conn::process() {
     if (!write_ret) {
         close_conn();
     }
-
-    std::cout << "http_conn::process after process_write " << m_TRIGMode << std::endl;
 
     // 服务器子线程调用process_write完成响应报文，随后注册epollout事件。
     // 服务器主线程检测写事件，并调用http_conn::write函数将响应报文发送给浏览器端。

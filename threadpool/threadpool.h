@@ -111,7 +111,6 @@ void* threadpool<T>::worker(void* arg) {
 // 主要实现，工作线程从请求队列中取出某个任务进行处理，注意线程同步。
 template <typename T>
 void threadpool<T>::run() {
-    std::cout << "threadpool<T>::run()" << std::endl;
     while (true) {
         m_queuestat.wait();   // 信号量等待 P操作
         m_queuelocker.lock(); // 被唤醒后先加互斥锁,保证请求队列线程安全
@@ -136,9 +135,6 @@ void threadpool<T>::run() {
                 {
                     request->improv = 1;
                     connectionRAII mysqlcon(&request->mysql, m_connPool);
-
-                    std::cout << "threadpool<T>::run() for reactor" << std::endl;
-
                     request->process(); // http_conn::process() 处理HTTP请求的入口函数
                 } else {
                     request->improv = 1;
@@ -146,7 +142,6 @@ void threadpool<T>::run() {
                 }
             } else // 写
             {
-                std::cout << "threadpool<T>::run() for reactor write" << std::endl;
                 if (request->write()) {
                     request->improv = 1;
                 } else {

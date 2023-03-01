@@ -1,10 +1,12 @@
 CXX ?= g++
 
 DEBUG ?= 0
+
+CXXFLAGS = -std=c++11
 ifeq ($(DEBUG), 1)
     CXXFLAGS += -g
 else
-    CXXFLAGS += -O2
+    # CXXFLAGS += -O2
 
 endif
 

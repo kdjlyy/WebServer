@@ -1,6 +1,5 @@
 # Debug
 ./server -p 9006 -l 1 -o 1 -a 1 -m 1
-# ./server -p 9006 -l 1 -o 1 -a 0 -m 1
 
 # Proactor LT LT
 # ./server -p 9006 -c 1 -m 0 -t 16 -a 0
@@ -15,7 +14,7 @@
 # ./server -p 9006 -c 1 -m 3 -t 16 -a 0
 
 # Reactor LT ET
-# ./server -p 9006 -c 1 -m 1 -t 8 -a 1
+# ./server -p 9006 -c 1 -m 1 -t 16 -a 1
 
 # -p，自定义端口号，默认9006
 

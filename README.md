@@ -95,9 +95,17 @@ Benchmarking: GET http://127.0.0.1:9006/
 Speed=1711596 pages/min, 3194979 bytes/sec.
 Requests: 142633 susceed, 0 failed.
 ```
-5. Reactor LT + ET模式: ` QPS`
+5. Reactor LT + ET模式: `12907 QPS`
 ```bash
+# webbench -c 10000 -t 5 http://127.0.0.1:9006/
+Webbench - Simple Web Benchmark 1.5
+Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.
 
+Benchmarking: GET http://127.0.0.1:9006/
+10000 clients, running 5 sec.
+
+Speed=774420 pages/min, 1445606 bytes/sec.
+Requests: 64535 susceed, 0 failed.
 ```
 
 
