@@ -23,9 +23,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "../CGImysql/sql_connection_pool.h"
 #include "../lock/locker.h"
 #include "../log/log.h"
+#include "../mysql/sql_connection_pool.h"
 #include "../timer/lst_timer.h"
 
 class http_conn {

@@ -5,8 +5,8 @@
 #include <exception>
 #include <list>
 #include <pthread.h>
-#include "../CGImysql/sql_connection_pool.h"
 #include "../lock/locker.h"
+#include "../mysql/sql_connection_pool.h"
 
 template <typename T>
 class threadpool {

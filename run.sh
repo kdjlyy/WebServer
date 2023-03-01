@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Debug
 ./server -p 9006 -l 1 -o 1 -a 1 -m 1
 

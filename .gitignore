@@ -1,3 +1,4 @@
-.vscode
+/.vscode
 server
-webbench-1.5
+/webbench-1.5
+*_ServerLog
