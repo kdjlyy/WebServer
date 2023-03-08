@@ -28,6 +28,10 @@
 #include "../mysql/sql_connection_pool.h"
 #include "../timer/lst_timer.h"
 
+const int MAX_FD = 65536;           // 最大文件描述符
+const int MAX_EVENT_NUMBER = 10000; // 最大事件数
+const int TIMESLOT = 5;             // 最小超时单位
+
 class http_conn {
 public:
     static const int FILENAME_LEN = 200;       // 设置读取文件的名称m_real_file大小
@@ -123,14 +127,24 @@ private:
     bool add_blank_line();
 
 public:
+    // void http_timer_create(int connfd, struct sockaddr_in& client_address);
+
+    bool http_timer_init();
+    void deal_timer_close_connection(); // 清理定时器,关闭HTTP连接
+    bool adjust_timer();                // 刷新重置定时器
+    // int m_connfd;
+    client_data users_timer; // 客户端HTTP连接定时器
+    Utils utils;
+
     static int m_epollfd; // 调用epoll_create()创建的句柄
     static int m_user_count;
     MYSQL* mysql;
     int m_state; // 读为0, 写为1
 
 private:
-    int m_sockfd;
-    sockaddr_in m_address;
+    // 初始化时会被赋值
+    int m_sockfd;          // 客户端连接套接字
+    sockaddr_in m_address; // 客户端地址信息
 
     char m_read_buf[READ_BUFFER_SIZE]; // 存储读取的请求报文数据
     int m_read_idx;                    // 缓冲区中m_read_buf中数据的最后一个字节的下一个位置

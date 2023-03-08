@@ -218,6 +218,7 @@ bool http_conn::read_once() {
 // GET / HTTP/1.1
 // POST /2CGISQL.cgi HTTP/1.1
 http_conn::HTTP_CODE http_conn::parse_request_line(char* text) {
+    LOG_INFO("request line:%s", text);
     m_url = strpbrk(text, " \t"); // 返回text中第一次出现" "或\t的位置
     if (!m_url) {
         return BAD_REQUEST;
@@ -238,9 +239,9 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char* text) {
         return BAD_REQUEST;
     *m_version++ = '\0';
     m_version += strspn(m_version, " \t");
-    if (strcasecmp(m_version, "HTTP/1.1") != 0) // 用来比较参数s1 和s2 字符串前n个字符，比较时会自动忽略大小写的差异
+    if ((strcasecmp(m_version, "HTTP/1.1") != 0) && strcasecmp(m_version, "HTTP/1.0") != 0)
         return BAD_REQUEST;
-    if (strncasecmp(m_url, "http://", 7) == 0) {
+    if (strncasecmp(m_url, "http://", 7) == 0) { // 用来比较参数s1 和s2 字符串前n个字符，比较时会自动忽略大小写的差异
         m_url += 7;
         m_url = strchr(m_url, '/'); // 一个串中查找给定字符的第一个匹配之处
     }
@@ -677,4 +678,38 @@ void http_conn::process() {
     // 服务器子线程调用process_write完成响应报文，随后注册epollout事件。
     // 服务器主线程检测写事件，并调用http_conn::write函数将响应报文发送给浏览器端。
     modfd(m_epollfd, m_sockfd, EPOLLOUT, m_TRIGMode);
+}
+
+void http_conn::deal_timer_close_connection() {
+    users_timer.timer->cb_func(&users_timer);
+    if (users_timer.timer) {
+        utils.m_timer_lst.del_timer(users_timer.timer);
+    }
+    LOG_INFO("close fd %d", users_timer.sockfd);
+}
+
+// 初始化客户端HTTP连接的定时器并加入定时器双向链表中
+bool http_conn::http_timer_init() {
+    users_timer.address = m_address;
+    users_timer.sockfd = m_sockfd;
+    util_timer* timer = new util_timer;
+    timer->user_data = &users_timer;
+    timer->cb_func = cb_func;
+    time_t cur = time(NULL);
+    timer->expire = cur + 3 * TIMESLOT;
+    users_timer.timer = timer;
+    utils.m_timer_lst.add_timer(timer);
+    return true;
+}
+
+bool http_conn::adjust_timer() {
+    if (users_timer.timer) {
+        time_t cur = time(NULL);
+        users_timer.timer->expire = cur + 3 * TIMESLOT;
+        utils.m_timer_lst.adjust_timer(users_timer.timer);
+
+        LOG_INFO("client: %d %s", m_sockfd, "adjust timer once");
+        return true;
+    }
+    return false;
 }

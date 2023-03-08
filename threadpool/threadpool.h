@@ -5,6 +5,7 @@
 #include <exception>
 #include <list>
 #include <pthread.h>
+#include "../http/http_conn.h"
 #include "../lock/locker.h"
 #include "../mysql/sql_connection_pool.h"
 
@@ -134,25 +135,20 @@ void threadpool<T>::run() {
             if (0 == request->m_state) {
                 if (request->read_once()) // 循环读取客户数据，直到无数据可读或对方关闭连接
                 {
-                    request->improv = 1; //TODO
+                    // request->improv = 1;
                     connectionRAII mysqlcon(&request->mysql, m_connPool);
                     request->process(); // http_conn::process() 处理HTTP请求的入口函数
                 } else {
-                    request->improv = 1; // TODO
-                    request->timer_flag = 1;
+                    // 读取客户端请求数据出错，需要关闭HTTP连接
+                    request->deal_timer_close_connection();
                 }
             } else { // 写
                 // http写(从响应报文缓冲区/mmap内存映射区读取数据，将响应报文发送给浏览器端)
-                if (request->write()) {
-                    request->improv = 1;
-                } else {
+                if (!request->write()) {
                     // 短链接，需要关闭HTTP连接
-
-                    request->improv = 1;
-                    request->timer_flag = 1;
+                    request->deal_timer_close_connection();
                 }
             }
-
         } else // Proactor模型(主线程和内核负责处理读写数据、接收新连接等I/O操作，工作线程仅负责业务逻辑，如处理客户请求)
         {
             connectionRAII mysqlcon(&request->mysql, m_connPool);
