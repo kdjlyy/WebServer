@@ -51,8 +51,8 @@ private:
 
     Singleton3();
     ~Singleton3();
-    Singleton3(const Singleton3& other) = delete;
-    Singleton3& operator=(const Singleton3& t) = delete;
+    Singleton3(const Singleton3&) = delete;
+    Singleton3& operator=(const Singleton3&) = delete;
 
 public:
     static Singleton3* getInstance() { return instance; }

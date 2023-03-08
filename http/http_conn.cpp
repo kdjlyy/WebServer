@@ -101,15 +101,15 @@ void http_conn::close_conn(bool real_close) {
 }
 
 // 初始化连接,外部调用初始化套接字地址
-void http_conn::init(int sockfd, const sockaddr_in& addr, char* root, int TRIGMode,
+void http_conn::init(int connfd, const sockaddr_in& addr, char* root, int TRIGMode,
                      int close_log, string user, string passwd, string sqlname) {
-    m_sockfd = sockfd; // sockfd:已连接描述符connfd
+    m_sockfd = connfd; // 已连接描述符connfd
     m_address = addr;  // addr:客户端socket信息(ip:port)
 
     // 将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
     // 监听已连接描述符，开启EPOLLONESHOT，因为我们希望每个socket在任意时刻都只被一个线程处理
     // connfd也被注册到了内核事件表中，可以由eventLoop的epoll_wait()捕捉到
-    addfd(http_conn::m_epollfd, sockfd, true, m_TRIGMode);
+    addfd(http_conn::m_epollfd, connfd, true, m_TRIGMode);
     http_conn::m_user_count++;
 
     // 当浏览器出现连接重置时，可能是网站根目录出错或http响应格式出错或者访问的文件中内容完全为空
@@ -531,7 +531,7 @@ bool http_conn::write() {
 
             // 浏览器的请求为长连接
             if (m_linger) {
-                init(); // 重新初始化HTTP对象
+                http_conn::init(); // 重新初始化HTTP对象
                 return true;
             } else {
                 return false;

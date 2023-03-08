@@ -16,6 +16,12 @@ int main(int argc, char* argv[]) {
 
     // 初始化
     // actor_model: 0-Proactor模型 1-Reactor模型
+
+    // TRIGMode: (listen_fd, connfd)
+    // 0，表示使用   LT    +    LT      m_LISTENTrigmode = 0, m_CONNTrigmode = 0
+    // 1，表示使用   LT    +    ET      m_LISTENTrigmode = 0, m_CONNTrigmode = 1
+    // 2，表示使用   ET    +    LT      m_LISTENTrigmode = 1, m_CONNTrigmode = 0
+    // 3，表示使用   ET    +    ET      m_LISTENTrigmode = 1, m_CONNTrigmode = 1
     server.init(config.PORT, mysql_host, mysql_port, user, passwd, databasename, config.LOGWrite,
                 config.OPT_LINGER, config.TRIGMode, config.sql_num, config.thread_num,
                 config.close_log, config.actor_model);

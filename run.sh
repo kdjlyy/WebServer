@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Debug
-./server -p 9006 -l 1 -o 1 -a 1 -m 1
+./server -p 9006 -l 1 -m 1 -o 1 -a 1
 
 # Proactor LT LT
 # ./server -p 9006 -c 1 -m 0 -t 16 -a 0

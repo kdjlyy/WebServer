@@ -79,7 +79,7 @@ public:
 
 public:
     // 初始化套接字地址，函数内部会调用私有方法init
-    void init(int sockfd, const sockaddr_in& addr, char* root, int TRIGMode, int close_log,
+    void init(int connfd, const sockaddr_in& addr, char* root, int TRIGMode, int close_log,
               string user, string passwd, string sqlname);
     void close_conn(bool real_close = true); // 关闭http连接
     void process();

@@ -1,29 +1,31 @@
-#include <chrono>
-#include <condition_variable>
-#include <iostream>
-#include <mutex>
-#include <thread>
-
+#include <bits/stdc++.h>
 using namespace std;
 
-int a = 0;
+class A {
+public:
+    A() { cout << "A()" << endl; }
+    A(int _a) {
+        a = _a;
+        cout << "A(_a)" << endl;
+    }
 
-int main() {
-    condition_variable cv;
-    std::thread t([&]() {
-        while (true) {
-            this_thread::sleep_for(chrono::seconds(1));
-            a++;
-            cout << a << endl;
-            if (a == 5) {
-                cv.notify_all();
-            }
-        }
-    });
+private:
+    int a;
+};
 
-    mutex mtx;
-    std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock, [&]() { return a > 10; });
-    cout << "a = " << a << endl;
-    return 0;
+class B {
+public:
+    B() { cout << "B()" << endl; }
+    B(int _b) : b(_b), m_a(_b) {
+        // b = _b, m_a = A(_b);
+        cout << "B(_b)" << endl;
+    }
+
+private:
+    int b;
+    A m_a;
+};
+
+int main(int argc, char** argv) {
+    B b(100);
 }

@@ -8,6 +8,7 @@
 #include "../lock/locker.h"
 #include "../mysql/sql_connection_pool.h"
 
+// 类模版
 template <typename T>
 class threadpool {
 public:
@@ -31,7 +32,7 @@ private:
     pthread_t* m_threads;        // 描述线程池的数组，其大小为m_thread_number
     std::list<T*> m_workqueue;   // 请求队列
     locker m_queuelocker;        // 保护请求队列的互斥锁(RAII)
-    sem m_queuestat;             // 是否有任务需要处理
+    sem m_queuestat;             // 是否有任务需要处理的信号量
     connection_pool* m_connPool; // 数据库连接池
     int m_actor_model;           // 模型切换
 };
@@ -101,7 +102,7 @@ bool threadpool<T>::append_p(T* request) {
 // 线程处理函数
 template <typename T>
 void* threadpool<T>::worker(void* arg) {
-    // 将参数强转为线程池类，调用成员方法
+    // 将参数强转为线程池类类型，调用成员方法
     threadpool* pool = (threadpool*)arg;
     pool->run();
     return pool;
@@ -129,22 +130,24 @@ void threadpool<T>::run() {
 
         // Reactor模型(主线程只负责监听文件描述符上是否有事件发生，有的话立即通知工作线程读写数据、接受新连接及处理客户请求)
         if (1 == m_actor_model) {
-            if (0 == request->m_state) // http_conn::m_state; 读为0, 写为1
-            {
+            // http_conn::m_state; 读HTTP报文并将响应报文发送给浏览器端为0, 直接将响应报文发送给浏览器端为1
+            if (0 == request->m_state) {
                 if (request->read_once()) // 循环读取客户数据，直到无数据可读或对方关闭连接
                 {
-                    request->improv = 1;
+                    request->improv = 1; //TODO
                     connectionRAII mysqlcon(&request->mysql, m_connPool);
                     request->process(); // http_conn::process() 处理HTTP请求的入口函数
                 } else {
-                    request->improv = 1;
+                    request->improv = 1; // TODO
                     request->timer_flag = 1;
                 }
-            } else // 写
-            {
+            } else { // 写
+                // http写(从响应报文缓冲区/mmap内存映射区读取数据，将响应报文发送给浏览器端)
                 if (request->write()) {
                     request->improv = 1;
                 } else {
+                    // 短链接，需要关闭HTTP连接
+
                     request->improv = 1;
                     request->timer_flag = 1;
                 }

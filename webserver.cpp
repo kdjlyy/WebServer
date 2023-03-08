@@ -88,7 +88,7 @@ void WebServer::sql_pool() {
 
 void WebServer::thread_pool() {
     // 线程池
-    m_pool = new threadpool<http_conn>(m_actormodel, m_connPool, m_thread_num);
+    WebServer::m_pool = new threadpool<http_conn>(m_actormodel, m_connPool, m_thread_num);
 }
 
 void WebServer::timer(int connfd, struct sockaddr_in client_address) {
@@ -118,7 +118,7 @@ void WebServer::adjust_timer(util_timer* timer) {
     LOG_INFO("%s", "adjust timer once");
 }
 
-// 处理异常事件,调用定时器对应的回调函数（从内核事件表删除事件，关闭文件描述符，释放连接资源），删除定时器
+// [断开连接]处理异常事件,调用定时器对应的回调函数（从内核事件表删除事件，关闭文件描述符，释放连接资源），删除定时器
 void WebServer::deal_timer(util_timer* timer, int sockfd) {
     timer->cb_func(&users_timer[sockfd]);
     if (timer) {
@@ -201,13 +201,17 @@ void WebServer::dealwithread(int sockfd) {
 
     // reactor
     if (1 == m_actormodel) {
-        if (timer) {
-            adjust_timer(timer);
-        }
+        LOG_INFO("[Reactor Mode] deal with the client(%s) read request", inet_ntoa(users[sockfd].get_address()->sin_addr));
+
         // 若监测到读事件，将该事件放入请求队列
         WebServer::m_pool->append(WebServer::users + sockfd, 0);
 
-        // TODO
+        if (timer) {
+            adjust_timer(timer);
+        }
+
+        // TODO 工作线程将读/写请求队列上的连接里的数据读进去read_buf里循环才结束
+        // ?
         // https://github.com/qinguoyi/TinyWebServer/issues/70
         while (true) {
             if (1 == users[sockfd].improv) {
@@ -221,16 +225,16 @@ void WebServer::dealwithread(int sockfd) {
         }
     } else {
         // proactor
-        if (users[sockfd].read_once()) // 读入对应缓冲区
-        {
-            LOG_INFO("deal with the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
+        if (users[sockfd].read_once()) { // 读入对应缓冲区
+            LOG_INFO("[Proactor Mode] deal with the client(%s) read request", inet_ntoa(users[sockfd].get_address()->sin_addr));
 
             // 若监测到读事件，将该事件放入请求队列
-            m_pool->append_p(users + sockfd);
+            WebServer::m_pool->append_p(users + sockfd);
 
             if (timer) {
                 adjust_timer(timer);
             }
+
         } else {
             deal_timer(timer, sockfd);
         }
@@ -241,16 +245,19 @@ void WebServer::dealwithwrite(int sockfd) {
     util_timer* timer = users_timer[sockfd].timer;
     // reactor
     if (1 == m_actormodel) {
+        LOG_INFO("[Reactor Mode] append client(%s) to response queue", inet_ntoa(users[sockfd].get_address()->sin_addr));
         if (timer) {
             adjust_timer(timer);
         }
 
-        m_pool->append(users + sockfd, 1);
+        // append()的status为1表示不需要解析HTTP报文，直接将HTTP响应报文发送给客户端
+        WebServer::m_pool->append(users + sockfd, 1);
 
-        // TODO
+        // TODO 这里主线程将http_conn加入了读写任务请求队列中，并直接将HTTP响应报文发送给客户端
         while (true) {
             if (1 == users[sockfd].improv) {
                 if (1 == users[sockfd].timer_flag) {
+                    // 关闭连接
                     deal_timer(timer, sockfd);
                     users[sockfd].timer_flag = 0;
                 }
@@ -261,8 +268,7 @@ void WebServer::dealwithwrite(int sockfd) {
     } else {
         // proactor
         if (users[sockfd].write()) {
-            LOG_INFO("send data to the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
-
+            LOG_INFO("[Proactor Mode] send data to the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
             if (timer) {
                 adjust_timer(timer);
             }
@@ -355,6 +361,7 @@ void WebServer::eventLoop() {
                 dealclientdata();
             }
             // 异常事件:服务器端关闭连接，移除对应的定时器
+            // EPOLLRDHUP和EPOLLHUP可能是服务端关闭连接导致的, EPOLLERR表示用户连接描述符发生错误
             else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 util_timer* timer = users_timer[sockfd].timer;
                 deal_timer(timer, sockfd);
@@ -364,9 +371,9 @@ void WebServer::eventLoop() {
                 // SIGALRM和SIGTERM信号
                 bool flag = dealwithsignal(timeout, stop_server);
                 if (false == flag)
-                    LOG_ERROR("%s", "dealclientdata failure");
+                    LOG_ERROR("%s", "deal with signal failure");
             }
-            // 读写事件:处理客户连接上接收到的数据
+            // 读写事件:处理用户连接上接收到的数据（此时sockfd == connfd）
             else if (events[i].events & EPOLLIN) {
                 dealwithread(sockfd);
             } else if (
