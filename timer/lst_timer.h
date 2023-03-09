@@ -1,10 +1,12 @@
 #ifndef LST_TIMER
 #define LST_TIMER
-
+// #define TERMINAL_DEBUG
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <malloc.h>
+#include <mutex>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
@@ -36,7 +38,7 @@ struct client_data {
 // 定时器类
 class util_timer {
 public:
-    util_timer() : prev(nullptr), next(nullptr) {}
+    util_timer() : user_data(nullptr), prev(nullptr), next(nullptr) {}
 
 public:
     time_t expire;                 // 超时时间
@@ -72,21 +74,18 @@ public:
     void init(int timeslot);
 
     // 对文件描述符设置非阻塞
-    int setnonblocking(int fd);
-
+    static int setnonblocking(int fd);
     // 将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
-    void addfd(int epollfd, int fd, bool one_shot, int TRIGMode);
-
+    static void addfd(int epollfd, int fd, bool one_shot, int TRIGMode);
     // 信号处理函数
     static void sig_handler(int sig);
-
     // 设置信号函数
-    void addsig(int sig, void(handler)(int), bool restart = true);
+    static void addsig(int sig, void(handler)(int), bool restart = true);
 
     // 定时处理任务，重新定时以不断触发SIGALRM信号
     void timer_handler();
 
-    void show_error(int connfd, const char* info);
+    static void show_error(int connfd, const char* info);
 
 public:
     static int* u_pipefd;
@@ -96,6 +95,6 @@ public:
 };
 
 // 定时器回调函数
-void cb_func(client_data* user_data);
+void real_cb_func(client_data* user_data);
 
 #endif

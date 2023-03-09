@@ -83,7 +83,12 @@ bool threadpool<T>::append(T* request, int state) {
     m_workqueue.push_back(request); // 添加任务
     m_queuelocker.unlock();
 
-    m_queuestat.post(); // 信号量提醒有任务要处理 V操作
+#ifdef TERMINAL_DEBUG
+    printf("任务(%s:%d)已添加到读/写任务请求队列 任务类型:%d\n",
+           inet_ntoa(request->get_address()->sin_addr), (int)request->get_address()->sin_port, state);
+#endif
+
+    m_queuestat.post(); // 信号量提醒有任务要处理 P操作
     return true;
 }
 
@@ -109,8 +114,7 @@ void* threadpool<T>::worker(void* arg) {
     return pool;
 }
 
-// run执行任务
-// 主要实现，工作线程从请求队列中取出某个任务进行处理，注意线程同步。
+// 工作线程从请求队列中取出某个任务进行处理，注意线程同步。
 template <typename T>
 void threadpool<T>::run() {
     while (true) {
@@ -137,20 +141,32 @@ void threadpool<T>::run() {
                 {
                     // request->improv = 1;
                     connectionRAII mysqlcon(&request->mysql, m_connPool);
-                    request->process(); // http_conn::process() 处理HTTP请求的入口函数
+
+#ifdef TERMINAL_DEBUG
+                    printf("[Debug][Reactor Mode] 请求 %s:%d 已被线程池调度\n", inet_ntoa(request->get_address()->sin_addr),
+                           request->get_address()->sin_port);
+#endif
+                    request->process(); // http_conn::process()
+                                        // 处理HTTP请求的入口函数
                 } else {
                     // 读取客户端请求数据出错，需要关闭HTTP连接
                     request->deal_timer_close_connection();
                 }
-            } else { // 写
+            } else {
                 // http写(从响应报文缓冲区/mmap内存映射区读取数据，将响应报文发送给浏览器端)
-                if (!request->write()) {
+                if (request->write() == false) {
                     // 短链接，需要关闭HTTP连接
                     request->deal_timer_close_connection();
+
+#ifdef TERMINAL_DEBUG
+                    printf("[Reactor Mode] short connection closed for %s:%d\n",
+                           inet_ntoa(request->get_address()->sin_addr),
+                           request->get_address()->sin_port);
+#endif
                 }
             }
-        } else // Proactor模型(主线程和内核负责处理读写数据、接收新连接等I/O操作，工作线程仅负责业务逻辑，如处理客户请求)
-        {
+        } else {
+            // Proactor模型(主线程和内核负责处理读写数据、接收新连接等I/O操作，工作线程仅负责业务逻辑，如处理客户请求)
             connectionRAII mysqlcon(&request->mysql, m_connPool);
             request->process();
         }

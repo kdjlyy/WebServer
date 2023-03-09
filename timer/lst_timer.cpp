@@ -16,6 +16,7 @@ sort_timer_lst::~sort_timer_lst() {
         tmp = head;
     }
 }
+
 // 将目标定时器添加到链表中
 void sort_timer_lst::add_timer(util_timer* timer) {
     if (!timer) {
@@ -33,6 +34,8 @@ void sort_timer_lst::add_timer(util_timer* timer) {
     }
     add_timer(timer, head);
 }
+
+// 把timer插入到lst_head后面
 void sort_timer_lst::add_timer(util_timer* timer, util_timer* lst_head) {
     util_timer* prev = lst_head;
     util_timer* tmp = prev->next;
@@ -130,12 +133,17 @@ void sort_timer_lst::tick() {
 //============== 定时器回调函数 ================
 //============================================
 // 定时器回调函数 从内核事件表删除事件，关闭文件描述符，释放连接资源
-void cb_func(client_data* user_data) {
+void real_cb_func(client_data* user_data) {
     // 删除非活动连接在socket上的注册事件
     epoll_ctl(Utils::u_epollfd, EPOLL_CTL_DEL, user_data->sockfd, 0);
     assert(user_data);
     close(user_data->sockfd);  // 关闭文件描述符
     http_conn::m_user_count--; // 减少连接数
+
+#ifdef TERMINAL_DEBUG
+    printf("[Debug] 用户 %s:%d 连接被删除, 服务器当前人数: %d\n", inet_ntoa(user_data->address.sin_addr),
+           user_data->address.sin_port, http_conn::m_user_count);
+#endif
 }
 
 //==============================================

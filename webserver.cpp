@@ -96,7 +96,7 @@ void WebServer::timer(int connfd, struct sockaddr_in client_address) {
     // 用已连接描述符connfd来标识用户的HTTP连接,这里初始化用户连接
     WebServer::users[connfd].init(connfd, client_address, m_root,
                                   m_CONNTrigmode, m_close_log, m_user,
-                                  m_passWord, m_databaseName);
+                                  m_passWord, m_databaseName, m_actormodel);
     WebServer::users[connfd].http_timer_init();
 }
 
@@ -115,23 +115,20 @@ bool WebServer::dealclientdata() {
         }
 
         if (http_conn::m_user_count >= MAX_FD) {
-            utils.show_error(connfd, "Internal server busy");
+            Utils::show_error(connfd, "Internal server busy");
             LOG_ERROR("%s", "Internal server busy");
             return false;
         }
-
         WebServer::timer(connfd, client_address);
-    } else // ET
-    {
+    } else { // ET
         while (1) {
-            int connfd = accept(m_listenfd, (struct sockaddr*)&client_address,
-                                &client_addrlength);
+            int connfd = accept(m_listenfd, (struct sockaddr*)&client_address, &client_addrlength);
             if (connfd < 0) {
                 LOG_ERROR("%s:errno is:%d", "accept error", errno);
                 break;
             }
             if (http_conn::m_user_count >= MAX_FD) {
-                utils.show_error(connfd, "Internal server busy");
+                Utils::show_error(connfd, "Internal server busy");
                 LOG_ERROR("%s", "Internal server busy");
                 break;
             }
@@ -174,22 +171,27 @@ bool WebServer::dealwithsignal(bool& timeout, bool& stop_server) {
 void WebServer::dealwithread(int sockfd) {
     // reactor
     if (1 == m_actormodel) {
-        LOG_INFO("[Reactor Mode] deal with the client(%s) read request", inet_ntoa(users[sockfd].get_address()->sin_addr));
+        LOG_INFO("[Reactor Mode] deal with the client(%s:%d) read request",
+                 inet_ntoa(users[sockfd].get_address()->sin_addr),
+                 users[sockfd].get_address()->sin_port);
+
+        // 刷新定时器，因为可能这个连接很有没有数据传输了，定时器已经过期被主线程清理了
+        users[sockfd].adjust_timer();
 
         // 若监测到读事件，将该事件放入请求队列
-        WebServer::m_pool->append(WebServer::users + sockfd, 0);
-        users[sockfd].adjust_timer();
+        WebServer::m_pool->append(users + sockfd, 0);
+
     } else {
         // proactor
         if (users[sockfd].read_once()) { // 读入对应缓冲区
-            LOG_INFO(
-                "[Proactor Mode] deal with the client(%s) read "
-                "request",
-                inet_ntoa(users[sockfd].get_address()->sin_addr));
+            LOG_INFO("[Proactor Mode] deal with the client(%s:%d) read request",
+                     inet_ntoa(users[sockfd].get_address()->sin_addr),
+                     users[sockfd].get_address()->sin_port);
+
+            users[sockfd].adjust_timer();
 
             // 若监测到读事件，将该事件放入请求队列
             WebServer::m_pool->append_p(users + sockfd);
-            users[sockfd].adjust_timer();
 
         } else {
             users[sockfd].deal_timer_close_connection();
@@ -200,15 +202,21 @@ void WebServer::dealwithread(int sockfd) {
 void WebServer::dealwithwrite(int sockfd) {
     // reactor
     if (1 == m_actormodel) {
-        LOG_INFO("[Reactor Mode] append client(%s) to response queue", inet_ntoa(users[sockfd].get_address()->sin_addr));
-        users[sockfd].adjust_timer();
+        LOG_INFO("[Reactor Mode] trying append client(%s:%d) to response queue",
+                 inet_ntoa(users[sockfd].get_address()->sin_addr),
+                 users[sockfd].get_address()->sin_port);
 
-        // append()的status为1表示不需要解析HTTP报文，直接将HTTP响应报文发送给客户端
+        users[sockfd].adjust_timer();
+        // status为1表示不需要解析HTTP报文，直接将HTTP响应报文从缓冲区发送给客户端
         WebServer::m_pool->append(users + sockfd, 1);
+
     } else {
         // proactor
         if (users[sockfd].write()) {
-            LOG_INFO("[Proactor Mode] send data to the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
+            LOG_INFO("[Proactor Mode] send data to the client(%s:%d)",
+                     inet_ntoa(users[sockfd].get_address()->sin_addr),
+                     users[sockfd].get_address()->sin_port);
+
             users[sockfd].adjust_timer();
         } else {
             users[sockfd].deal_timer_close_connection();
@@ -246,33 +254,31 @@ void WebServer::eventListen() {
     ret = listen(m_listenfd, 5);
     assert(ret >= 0);
 
-    utils.init(TIMESLOT);
+    // utils.init(TIMESLOT);
+    (*http_conn::utils).init(TIMESLOT);
 
     // 创建一个额外的文件描述符来唯一标识内核中的epoll事件表
     m_epollfd = epoll_create(5);
     assert(m_epollfd != -1);
 
     // 调用epoll_ctl(),将内核事件表注册读事件，ET模式，将m_listenfd设置为非阻塞，当listen到新的客户连接时，listenfd变为就绪事件
-    utils.addfd(m_epollfd, m_listenfd, false,
-                m_LISTENTrigmode); // false表示不开启EPOLLONESHOT
+    Utils::addfd(m_epollfd, m_listenfd, false, m_LISTENTrigmode); // false表示不开启EPOLLONESHOT
     http_conn::m_epollfd = m_epollfd;
+    http_conn::m_user_count = 0;
 
     /* 用于信号通知逻辑 */
     // socketpair创建全双工管道，创建好的套接字分别是m_pipefd[0](读)和m_pipefd[1](写),这对套接字可以用于全双工通信
     ret = socketpair(PF_UNIX, SOCK_STREAM, 0, WebServer::m_pipefd);
     assert(ret != -1);
     // send是将信息发送给套接字缓冲区，如果缓冲区满了，则会阻塞，这时候会进一步增加信号处理函数的执行时间，为此，将其修改为非阻塞。
-    utils.setnonblocking(m_pipefd[1]);
+    Utils::setnonblocking(m_pipefd[1]);
 
     // 设置管道读端为LT非阻塞,向内核事件表注册
-    utils.addfd(m_epollfd, m_pipefd[0], false, 0);
+    Utils::addfd(m_epollfd, m_pipefd[0], false, 0);
 
-    utils.addsig(
-        SIGPIPE,
-        SIG_IGN); // 程序员收到SIGPIPE信号不会退出，直接把这个信号忽略掉
-    utils.addsig(SIGALRM, utils.sig_handler, false);
-    utils.addsig(SIGTERM, utils.sig_handler,
-                 false); // SIGTERM信号表示终端发送到程序的终止请求
+    Utils::addsig(SIGPIPE, SIG_IGN); // 程序员收到SIGPIPE信号不会退出，直接把这个信号忽略掉
+    Utils::addsig(SIGALRM, Utils::sig_handler, false);
+    Utils::addsig(SIGTERM, Utils::sig_handler, false); // SIGTERM信号表示终端发送到程序的终止请求
 
     // //每隔TIMESLOT时间触发SIGALRM信号给目前的进程
     alarm(TIMESLOT);
@@ -287,10 +293,8 @@ void WebServer::eventLoop() {
     bool stop_server = false;
 
     while (!stop_server) {
-        int number = epoll_wait(WebServer::m_epollfd, WebServer::events,
-                                MAX_EVENT_NUMBER, -1);
-        // 当系统调用被信号中断时，会返回 EINTR
-        // 错误。这个错误通常是由于系统调用被信号中断，而不是由于程序本身的错误。可能是因为时钟信号。
+        int number = epoll_wait(WebServer::m_epollfd, WebServer::events, MAX_EVENT_NUMBER, -1);
+        // 当系统调用被信号中断时，会返回 EINTR错误。这个错误通常是由于系统调用被信号中断，而不是由于程序本身的错误。可能是因为时钟信号。
         if (number < 0 && errno != EINTR) {
             LOG_ERROR("%s", "epoll failure");
             break;
@@ -320,12 +324,10 @@ void WebServer::eventLoop() {
                 if (false == flag)
                     LOG_ERROR("%s", "deal with signal failure");
             }
-            // 读写事件:处理用户连接上接收到的数据（此时sockfd ==
-            // connfd）
+            // 读写事件:处理用户连接上接收到的数据（此时sockfd == connfd）
             else if (events[i].events & EPOLLIN) {
                 dealwithread(sockfd);
-            } else if (
-                events[i].events & EPOLLOUT) { // 服务器子线程调用process_write完成响应报文，随后注册epollout事件
+            } else if (events[i].events & EPOLLOUT) {
                 dealwithwrite(sockfd);
             }
         }
@@ -333,8 +335,8 @@ void WebServer::eventLoop() {
         // SIGALARM信号来临时,timeout=true
         // 处理定时器为非必须事件，收到信号并不是立马处理,完成读写事件后，再进行处理
         if (timeout) {
-            utils
-                .timer_handler(); // 调用定时任务处理函数,从定时任务容器里删除过期的定时器，清理连接
+            // 调用定时任务处理函数,从定时任务容器里删除过期的定时器，清理连接
+            http_conn::http_timer_handler();
             // LOG_INFO("%s", "timer tick");
             timeout = false;
         }

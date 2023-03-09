@@ -16,6 +16,11 @@ const char* error_500_form = "There was an unusual problem serving the request f
 locker m_lock;
 map<string, string> users; // 用户名和密码
 
+// http_conn静态变量初始化
+int http_conn::m_user_count = 0;
+int http_conn::m_epollfd = -1;
+Utils* http_conn::utils = new Utils();
+
 int setnonblocking(int fd) {
     int old_option = fcntl(fd, F_GETFL);
     int new_option = old_option | O_NONBLOCK;
@@ -35,6 +40,10 @@ void http_conn::initmysql_result(connection_pool* connPool) {
 
     // 从表中检索完整的结果集
     MYSQL_RES* result = mysql_store_result(mysql);
+    if (!result) {
+        LOG_ERROR("MySQL store result failed~");
+        return;
+    }
 
     // 返回结果集中的列数
     int num_fields = mysql_num_fields(result);
@@ -86,13 +95,9 @@ void modfd(int epollfd, int fd, int ev, int TRIGMode) {
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
 
-int http_conn::m_user_count = 0;
-int http_conn::m_epollfd = -1;
-
 // 关闭连接，关闭一个连接，客户总量减一
 void http_conn::close_conn(bool real_close) {
     if (real_close && (m_sockfd != -1)) {
-        printf("close %d\n", m_sockfd);
         LOG_INFO("close %d\n", m_sockfd);
         removefd(m_epollfd, m_sockfd);
         m_sockfd = -1;
@@ -102,9 +107,9 @@ void http_conn::close_conn(bool real_close) {
 
 // 初始化连接,外部调用初始化套接字地址
 void http_conn::init(int connfd, const sockaddr_in& addr, char* root, int TRIGMode,
-                     int close_log, string user, string passwd, string sqlname) {
+                     int close_log, string user, string passwd, string sqlname, int actor_mode) {
     m_sockfd = connfd; // 已连接描述符connfd
-    m_address = addr;  // addr:客户端socket信息(ip:port)
+    m_address = addr;  // 客户端socket信息(ip:port)
 
     // 将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
     // 监听已连接描述符，开启EPOLLONESHOT，因为我们希望每个socket在任意时刻都只被一个线程处理
@@ -120,6 +125,10 @@ void http_conn::init(int connfd, const sockaddr_in& addr, char* root, int TRIGMo
     strcpy(sql_user, user.c_str());
     strcpy(sql_passwd, passwd.c_str());
     strcpy(sql_name, sqlname.c_str());
+
+    // users_timer = new client_data();
+    // users_timer->timer = new util_timer();
+    m_actor_mode = actor_mode;
 
     http_conn::init(); // 另一个init重载,设置默认值
 }
@@ -143,8 +152,9 @@ void http_conn::init() {
     m_write_idx = 0;
     cgi = 0;
     m_state = 0;
-    timer_flag = 0;
-    improv = 0;
+    // users_timer = new client_data();
+    // timer_flag = 0;
+    // improv = 0;
 
     memset(m_read_buf, '\0', READ_BUFFER_SIZE);
     memset(m_write_buf, '\0', WRITE_BUFFER_SIZE);
@@ -318,7 +328,7 @@ http_conn::HTTP_CODE http_conn::process_read() {
         // m_start_line是每一个数据行在m_read_buf中的起始位置
         // m_checked_idx表示从状态机在m_read_buf中读取的位置
         m_start_line = m_checked_idx;
-        LOG_INFO("[process_read->get_line()]: %s", text);
+        // LOG_INFO("[process_read->get_line()]: %s", text);
 
         // 主状态机的三种状态转移逻辑
         switch (m_check_state) {
@@ -473,6 +483,9 @@ void http_conn::unmap() {
 
 // http写(从响应报文缓冲区/mmap内存映射区读取数据，将响应报文发送给浏览器端)
 bool http_conn::write() {
+#ifdef TERMINAL_DEBUG
+    printf("开始准备发送连接 %s:%d 的响应报文\n", inet_ntoa(users_timer->address.sin_addr), users_timer->address.sin_port);
+#endif
     int temp = 0;
 
     //若要发送的数据长度为0,表示响应报文为空，一般不会出现这种情况
@@ -527,16 +540,20 @@ bool http_conn::write() {
         // 判断条件，数据已全部发送完
         if (bytes_to_send <= 0) {
             unmap();
-            // 在epoll树上重置EPOLLONESHOT事件
-            modfd(m_epollfd, m_sockfd, EPOLLIN, m_TRIGMode);
-
+            // // 在epoll树上重置EPOLLONESHOT事件
+            // modfd(m_epollfd, m_sockfd, EPOLLIN, m_TRIGMode);
+#ifdef TERMINAL_DEBUG
+            printf("连接 %s:%d 的响应报文发送完毕 是否为长连接: %d\n",
+                   inet_ntoa(users_timer->address.sin_addr), users_timer->address.sin_port, m_linger);
+#endif
             // 浏览器的请求为长连接
             if (m_linger) {
+                // 在epoll树上重置EPOLLONESHOT事件
+                modfd(m_epollfd, m_sockfd, EPOLLIN, m_TRIGMode);
                 http_conn::init(); // 重新初始化HTTP对象
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
     }
 }
@@ -662,9 +679,18 @@ void http_conn::process() {
 
     HTTP_CODE read_ret = process_read(); // 对我们读入该connfd读缓冲区的请求报文进行解析
 
+#ifdef TERMINAL_DEBUG
+    printf("[Debug][process] 连接 %s:%d 请求报文已解析完成\n",
+           inet_ntoa(m_address.sin_addr), m_address.sin_port);
+#endif
+
     // NO_REQUEST，表示请求不完整，需要继续接收请求数据
     // FILE_REQUEST,请求完成
     if (read_ret == NO_REQUEST) {
+
+        LOG_INFO("client %s:%d request not finish, enter a new loop",
+                 inet_ntoa(m_address.sin_addr), m_address.sin_port);
+
         modfd(m_epollfd, m_sockfd, EPOLLIN, m_TRIGMode); // 注册并监听读事件
         return;
     }
@@ -675,6 +701,14 @@ void http_conn::process() {
         close_conn();
     }
 
+    LOG_DEBUG("client %s:%d process response data finished",
+              inet_ntoa(m_address.sin_addr), m_address.sin_port);
+
+#ifdef TERMINAL_DEBUG
+    printf("[Debug][process] 连接 %s:%d 响应报文已构造完成，等待发送\n",
+           inet_ntoa(m_address.sin_addr), m_address.sin_port);
+#endif
+
     // 服务器子线程调用process_write完成响应报文，随后注册epollout事件。
     // 服务器主线程检测写事件，并调用http_conn::write函数将响应报文发送给浏览器端。
     modfd(m_epollfd, m_sockfd, EPOLLOUT, m_TRIGMode);
@@ -682,8 +716,16 @@ void http_conn::process() {
 
 void http_conn::deal_timer_close_connection() {
     users_timer.timer->cb_func(&users_timer);
-    if (users_timer.timer) {
-        utils.m_timer_lst.del_timer(users_timer.timer);
+    // TODO: 断开客户端连接数需要删除定时器链表上的对应节点
+    // 在Reoactor模式下这个过程是工作线程做的，然而定时器链表不是线程安全的，目前这个过程会产生Segment fault
+    // 所以目前禁用了
+    // 在Proactor模式下这个过程是主线程做的，正常工作
+
+    if (m_actor_mode == 0) {
+        // Proactor模式下, 主线程调用，删除客户连接定时器
+        if (users_timer.timer) {
+            utils->m_timer_lst.del_timer(users_timer.timer);
+        }
     }
     LOG_INFO("close fd %d", users_timer.sockfd);
 }
@@ -692,13 +734,15 @@ void http_conn::deal_timer_close_connection() {
 bool http_conn::http_timer_init() {
     users_timer.address = m_address;
     users_timer.sockfd = m_sockfd;
-    util_timer* timer = new util_timer;
+
+    util_timer* timer = new util_timer();
     timer->user_data = &users_timer;
-    timer->cb_func = cb_func;
+    timer->cb_func = real_cb_func;
     time_t cur = time(NULL);
     timer->expire = cur + 3 * TIMESLOT;
     users_timer.timer = timer;
-    utils.m_timer_lst.add_timer(timer);
+
+    utils->m_timer_lst.add_timer(timer);
     return true;
 }
 
@@ -706,10 +750,14 @@ bool http_conn::adjust_timer() {
     if (users_timer.timer) {
         time_t cur = time(NULL);
         users_timer.timer->expire = cur + 3 * TIMESLOT;
-        utils.m_timer_lst.adjust_timer(users_timer.timer);
+        utils->m_timer_lst.adjust_timer(users_timer.timer);
 
         LOG_INFO("client: %d %s", m_sockfd, "adjust timer once");
         return true;
     }
     return false;
+}
+
+void http_conn::http_timer_handler() {
+    utils->timer_handler();
 }

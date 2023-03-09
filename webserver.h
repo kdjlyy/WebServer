@@ -1,6 +1,6 @@
 #ifndef WEBSERVER_H
 #define WEBSERVER_H
-
+// #define TERMINAL_DEBUG
 #include <arpa/inet.h>
 #include <cassert>
 #include <errno.h>
@@ -70,6 +70,6 @@ public:
     int m_TRIGMode;
     int m_LISTENTrigmode;
     int m_CONNTrigmode;
-    Utils utils;
+    // Utils utils;
 };
 #endif

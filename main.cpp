@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[]) {
     // 需要修改的数据库信息,登录名,密码,库名
-    string mysql_host = "172.17.0.2";
+    string mysql_host = "172.17.0.3";
     int mysql_port = 3306;
     string user = "root";
     string passwd = "123456";

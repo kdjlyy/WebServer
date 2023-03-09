@@ -84,14 +84,12 @@ public:
 public:
     // 初始化套接字地址，函数内部会调用私有方法init
     void init(int connfd, const sockaddr_in& addr, char* root, int TRIGMode, int close_log,
-              string user, string passwd, string sqlname);
+              string user, string passwd, string sqlname, int actor_mode);
     void close_conn(bool real_close = true); // 关闭http连接
     void process();
     bool read_once(); // 读取浏览器端发来的全部数据
     bool write();     // 响应报文写入函数
-    sockaddr_in* get_address() {
-        return &m_address;
-    }
+    sockaddr_in* get_address() { return &m_address; }
     void initmysql_result(connection_pool* connPool); // 同步线程初始化数据库读取表
 
     /*
@@ -99,8 +97,8 @@ public:
      * 对于improv标志，其作用是保持主线程和子线程的同步；
      * 对于time_flag标志，其作用是标识子线程读写任务是否成功
     */
-    int timer_flag;
-    int improv;
+    // int timer_flag;
+    // int improv;
 
 private:
     void init();
@@ -127,19 +125,18 @@ private:
     bool add_blank_line();
 
 public:
-    // void http_timer_create(int connfd, struct sockaddr_in& client_address);
-
     bool http_timer_init();
     void deal_timer_close_connection(); // 清理定时器,关闭HTTP连接
     bool adjust_timer();                // 刷新重置定时器
-    // int m_connfd;
+
     client_data users_timer; // 客户端HTTP连接定时器
-    Utils utils;
+    static Utils* utils;     // 定时器双向链表
+    static void http_timer_handler();
 
     static int m_epollfd; // 调用epoll_create()创建的句柄
     static int m_user_count;
     MYSQL* mysql;
-    int m_state; // 读为0, 写为1
+    int m_state; // 读请求报文为0, 写响应报文为1
 
 private:
     // 初始化时会被赋值
@@ -180,6 +177,7 @@ private:
     map<string, string> m_users;
     int m_TRIGMode;
     int m_close_log;
+    int m_actor_mode; // 1 Reactor  0 Proactor
 
     char sql_user[100];
     char sql_passwd[100];
