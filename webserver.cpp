@@ -69,11 +69,9 @@ void WebServer::log_write() {
     if (0 == m_close_log) {
         // 初始化日志 m_log_write 0:同步写入 1:异步写入
         if (1 == m_log_write)
-            Log::get_instance()->init("./ServerLog", m_close_log, 3000, 800000,
-                                      800); // 异步需要设置阻塞队列长度
+            Log::get_instance()->init("./ServerLog", m_close_log, 3000, 800000, 800); // 异步需要设置阻塞队列长度
         else
-            Log::get_instance()->init("./ServerLog", m_close_log, 3000, 800000,
-                                      0);
+            Log::get_instance()->init("./ServerLog", m_close_log, 3000, 800000, 0);
     }
 }
 

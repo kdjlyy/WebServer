@@ -25,7 +25,7 @@ WebServer
 
 框架
 -------------
-<div align=center><img src="http://ww1.sinaimg.cn/large/005TJ2c7ly1ge0j1atq5hj30g60lm0w4.jpg" height="765"/> </div>
+<div align=center><img src="https://github.com/kdjlyy/WebServer/blob/main/root/WebServer%E6%9E%B6%E6%9E%84%E5%9B%BE.jpg" height="765"/> </div>
 
 
 压力测试
